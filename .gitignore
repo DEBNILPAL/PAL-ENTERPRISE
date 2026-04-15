@@ -6,6 +6,7 @@ frontend/dist/
 
 # Environment files
 backend/.env
+frontend/.env.production
 
 # Data files (JSON database)
 backend/data/users.json
@@ -22,3 +23,11 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Android / Capacitor
+frontend/android/app/build/
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/local.properties
+*.keystore
+*.jks
