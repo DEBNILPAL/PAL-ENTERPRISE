@@ -4,6 +4,12 @@ const cors = require('cors');
 const routes = require('./src/routes');
 const { initPostgres } = require('./src/database/pgDb');
 
+// Ensure JWT_SECRET is always available
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'pal-enterprise-default-secret-2026';
+  console.log('[Config] Using default JWT_SECRET (set JWT_SECRET env var for production)');
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
