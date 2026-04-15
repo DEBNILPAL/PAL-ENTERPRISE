@@ -4,7 +4,7 @@
     "dlNumber": "DL-100",
     "date": "2026-04-01",
     "billNo": "INV-001",
-    "amount": 5000,
+    "amount": 2000,
     "payment": 0,
     "paymentDate": "",
     "returnGoods": "",
@@ -208,5 +208,35 @@
     "type": "payment",
     "targetBillNo": "B-003",
     "createdAt": "2026-04-15T05:38:01.881Z"
+  },
+  {
+    "id": "mnzv0dyi8ukitm",
+    "dlNumber": "DL-100",
+    "date": "2026-04-15",
+    "billNo": "98",
+    "amount": 1266,
+    "payment": 0,
+    "paymentDate": "",
+    "returnGoods": "",
+    "expGoods": "",
+    "signature": "",
+    "type": "bill",
+    "targetBillNo": "",
+    "createdAt": "2026-04-15T09:40:06.186Z"
+  },
+  {
+    "id": "mnzv0vzru5li6b",
+    "dlNumber": "DL-100",
+    "date": "2026-04-15",
+    "billNo": "",
+    "amount": 0,
+    "payment": 66,
+    "paymentDate": "2026-04-15",
+    "returnGoods": "",
+    "expGoods": "",
+    "signature": "",
+    "type": "payment",
+    "targetBillNo": "98",
+    "createdAt": "2026-04-15T09:40:29.559Z"
   }
 ]

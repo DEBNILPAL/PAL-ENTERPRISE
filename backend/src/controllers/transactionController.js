@@ -187,4 +187,132 @@ function getSummary(req, res) {
   }
 }
 
-module.exports = { addEntry, addPayment, confirmPayment, getTransactions, getSummary };
+// PUT /api/edit-entry/:id — Edit an existing bill entry
+async function editEntry(req, res) {
+  try {
+    const { dlNumber } = req.user;
+    const { id } = req.params;
+    const { date, billNo, amount, returnGoods, expGoods } = req.body;
+
+    if (!date || !billNo || amount === undefined) {
+      return res.status(400).json({ error: 'Date, Bill Number, and Amount are required.' });
+    }
+
+    // Find the existing transaction
+    const existing = jsonDb.getTransactionsByDL(dlNumber);
+    const txn = existing.find(t => t.id === id && t.type === 'bill');
+    if (!txn) {
+      return res.status(404).json({ error: 'Bill not found.' });
+    }
+
+    // Check for duplicate bill number (if billNo changed)
+    if (billNo !== txn.billNo) {
+      const duplicate = existing.find(t => t.type === 'bill' && t.billNo === billNo && t.id !== id);
+      if (duplicate) {
+        return res.status(409).json({ error: `Bill number "${billNo}" already exists.` });
+      }
+    }
+
+    const oldBillNo = txn.billNo;
+
+    // Update in JSON db
+    const updates = {
+      date,
+      billNo: billNo.trim(),
+      amount: parseFloat(amount) || 0,
+      returnGoods: returnGoods || '',
+      expGoods: expGoods || '',
+    };
+    const updated = jsonDb.updateTransaction(id, dlNumber, updates);
+
+    if (!updated) {
+      return res.status(500).json({ error: 'Failed to update bill.' });
+    }
+
+    // If bill number changed, update all payments targeting this bill
+    if (billNo !== oldBillNo) {
+      const allTxns = jsonDb.getTransactionsByDL(dlNumber);
+      allTxns.filter(t => t.type === 'payment' && t.targetBillNo === oldBillNo).forEach(t => {
+        jsonDb.updateTransaction(t.id, dlNumber, { targetBillNo: billNo.trim() });
+      });
+    }
+
+    // Dual-write to PG
+    await pgDb.pgUpdateTransaction(id, { ...updates, dlNumber, oldBillNo });
+
+    const summary = jsonDb.getSummary(dlNumber);
+
+    return res.json({
+      message: 'Bill updated successfully.',
+      transaction: updated,
+      summary,
+    });
+  } catch (err) {
+    console.error('[Txn] Edit entry error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+// POST /api/admin/reports — Get all users' reports (password protected)
+async function getAllReports(req, res) {
+  try {
+    const { password, dateFrom, dateTo } = req.body;
+
+    if (password !== 'sudip@1971') {
+      return res.status(403).json({ error: 'Invalid admin password.' });
+    }
+
+    const users = jsonDb.getAllUsers();
+    const reports = users.map(u => {
+      let txns = jsonDb.getTransactionsByDL(u.dlNumber);
+
+      // Filter by date range if provided
+      if (dateFrom) {
+        txns = txns.filter(t => t.date >= dateFrom);
+      }
+      if (dateTo) {
+        txns = txns.filter(t => t.date <= dateTo);
+      }
+
+      let totalBillAmount = 0;
+      let totalPayment = 0;
+      txns.forEach(t => {
+        totalBillAmount += parseFloat(t.amount) || 0;
+        totalPayment += parseFloat(t.payment) || 0;
+      });
+
+      const billwise = jsonDb.getBillWiseSummary(u.dlNumber);
+      // Filter billwise by date too
+      let filteredBillwise = billwise;
+      if (dateFrom || dateTo) {
+        filteredBillwise = billwise.filter(b => {
+          let match = true;
+          if (dateFrom) match = match && b.date >= dateFrom;
+          if (dateTo) match = match && b.date <= dateTo;
+          return match;
+        });
+      }
+
+      return {
+        shopName: u.shopName,
+        dlNumber: u.dlNumber,
+        address: u.address || '',
+        phone: u.phone || '',
+        doctorName: u.doctorName || '',
+        ledgerFolio: u.ledgerFolio || '',
+        totalBillAmount: Math.round(totalBillAmount * 100) / 100,
+        totalPayment: Math.round(totalPayment * 100) / 100,
+        remainingBalance: Math.round((totalBillAmount - totalPayment) * 100) / 100,
+        billwise: filteredBillwise,
+        transactionCount: txns.length,
+      };
+    });
+
+    return res.json({ reports });
+  } catch (err) {
+    console.error('[Txn] Get all reports error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+module.exports = { addEntry, addPayment, confirmPayment, getTransactions, getSummary, editEntry, getAllReports };

@@ -142,9 +142,55 @@ async function pgAddTransaction(entry) {
   }
 }
 
+async function pgUpdateTransaction(id, updates) {
+  if (!pgEnabled) return;
+  try {
+    // Basic mapping (assuming updates object matches JSON schema keys, adjusting for snake_case if needed)
+    // We update by `id`, but since JSON gives a string ID and PG uses a SERIAL `id`.. wait, the IDs in JSON are strings like Date.now().
+    // If PG created its own serial ID, matching them is hard unless we used json_id. The existing PG schema uses SERIAL for id, and jsonDb uses a string ID.
+    // Let's rely on dl_number and bill_no and date to match, or add logic to handle it if the user wants. The simplest way is to delete and re-insert if we can't match IDs easily, BUT let's just do a basic UPDATE if possible. Or update by bill_no.
+    
+    // Actually, editing bill uses billNo. We can update based on dl_number and old_billNo
+    let query = `UPDATE transactions SET amount = $1, return_goods = $2, exp_goods = $3, date = $4, bill_no = $5 WHERE dl_number = $6 AND bill_no = $7 AND type = 'bill'`;
+    // We should pass old_billNo or just id if we had it, but PG id != JSON id. We can use dl_number + billNo + type='bill'
+    await pool.query(query, [
+      updates.amount, 
+      updates.returnGoods || '', 
+      updates.expGoods || '', 
+      updates.date, 
+      updates.billNo, 
+      updates.dlNumber, 
+      updates.oldBillNo || updates.billNo
+    ]);
+  } catch (err) {
+    console.error('[PG] Error updating transaction:', err.message);
+  }
+}
+
+async function pgDeleteTransaction(dlNumber, billNo) {
+  if (!pgEnabled) return;
+  try {
+    await pool.query(`DELETE FROM transactions WHERE dl_number = $1 AND bill_no = $2 AND type = 'bill'`, [dlNumber, billNo]);
+  } catch (err) {
+    console.error('[PG] Error deleting transaction:', err.message);
+  }
+}
+
+async function pgDeleteUser(dlNumber) {
+  if (!pgEnabled) return;
+  try {
+    await pool.query(`DELETE FROM users WHERE dl_number = $1`, [dlNumber]);
+  } catch (err) {
+    console.error('[PG] Error deleting user:', err.message);
+  }
+}
+
 module.exports = {
   initPostgres,
   pgCreateUser,
   pgAddTransaction,
+  pgUpdateTransaction,
+  pgDeleteTransaction,
+  pgDeleteUser,
   isPgEnabled: () => pgEnabled,
 };

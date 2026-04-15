@@ -56,6 +56,22 @@ function getUserByDoctorName(doctorName) {
   return users.find((u) => u.doctorName && u.doctorName.toLowerCase() === doctorName.toLowerCase()) || null;
 }
 
+function getUsersByShopName(shopName) {
+  const users = getAllUsers();
+  return users.filter((u) => u.shopName.toLowerCase() === shopName.toLowerCase());
+}
+
+function getUsersByDoctorName(doctorName) {
+  const users = getAllUsers();
+  return users.filter((u) => u.doctorName && u.doctorName.toLowerCase() === doctorName.toLowerCase());
+}
+
+function deleteUser(dlNumber) {
+  let users = getAllUsers();
+  users = users.filter(u => u.dlNumber !== dlNumber);
+  writeJSON(USERS_FILE, users);
+}
+
 function createUser(user) {
   const users = getAllUsers();
   // Ensure unique DL number
@@ -164,14 +180,43 @@ function getBillWiseSummary(dlNumber) {
   return Object.values(bills);
 }
 
+function updateTransaction(id, dlNumber, updates) {
+  const all = readJSON(TRANSACTIONS_FILE);
+  const index = all.findIndex(t => t.id === id && t.dlNumber === dlNumber);
+  if (index !== -1) {
+    all[index] = { ...all[index], ...updates };
+    writeJSON(TRANSACTIONS_FILE, all);
+    return all[index];
+  }
+  return null;
+}
+
+function deleteTransaction(id, dlNumber) {
+  let all = readJSON(TRANSACTIONS_FILE);
+  all = all.filter(t => !(t.id === id && t.dlNumber === dlNumber));
+  writeJSON(TRANSACTIONS_FILE, all);
+}
+
+function deleteTransactionsByDL(dlNumber) {
+  let all = readJSON(TRANSACTIONS_FILE);
+  all = all.filter(t => t.dlNumber !== dlNumber);
+  writeJSON(TRANSACTIONS_FILE, all);
+}
+
 module.exports = {
   getAllUsers,
   getUserByDL,
   getUserByShopName,
   getUserByDoctorName,
+  getUsersByShopName,
+  getUsersByDoctorName,
+  deleteUser,
   createUser,
   getTransactionsByDL,
   addTransaction,
+  updateTransaction,
+  deleteTransaction,
+  deleteTransactionsByDL,
   getSummary,
   getBillWiseSummary,
   USERS_FILE,
