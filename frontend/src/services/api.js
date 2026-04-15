@@ -40,12 +40,17 @@ API.interceptors.response.use(
 // Auth
 export const signup = (data) => API.post('/signup', data);
 export const login = (data) => API.post('/login', data);
+export const deleteProfile = (dlNumber, data) => API.delete(`/delete-profile/${dlNumber}`, { data });
 
 // Transactions
 export const addEntry = (data) => API.post('/add-entry', data);
+export const editEntry = (id, data) => API.put(`/edit-entry/${id}`, data);
 export const addPayment = (data) => API.post('/add-payment', data);
 export const confirmPayment = (data) => API.post('/add-payment/confirm', data);
 export const getTransactions = (dlNumber) => API.get(`/transactions/${dlNumber}`);
 export const getSummary = (dlNumber) => API.get(`/summary/${dlNumber}`);
+
+// Admin
+export const getAdminReports = (data) => API.post('/admin/reports', data);
 
 export default API;

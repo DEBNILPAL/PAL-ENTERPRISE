@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import {
-  getTransactions, getSummary, addEntry, addPayment, confirmPayment
+  getTransactions, getSummary, addEntry, addPayment, confirmPayment, editEntry, deleteProfile
 } from '../services/api';
 import {
   LogOut, Plus, CreditCard, IndianRupee, TrendingDown, TrendingUp,
   Receipt, FileText, Search, Filter, Download,
   AlertCircle, CheckCircle, X, QrCode, PenTool, RotateCcw,
   ChevronDown, ChevronRight, Pill, Package, Clock, User,
-  MapPin, Hash, Phone, Keyboard, BookOpen, Stethoscope
+  MapPin, Hash, Phone, Keyboard, BookOpen, Stethoscope, Edit3, Trash2, Lock, Eye, EyeOff
 } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import { QRCodeSVG } from 'qrcode.react';
@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [editBillData, setEditBillData] = useState(null); // null = closed, object = open with bill data
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -74,6 +75,22 @@ export default function Dashboard() {
 
   const handleLogout = () => { logout(); navigate('/', { replace: true }); };
   const toggleBillExpand = (billNo) => setExpandedBills((prev) => ({ ...prev, [billNo]: !prev[billNo] }));
+
+  // Open edit modal with bill data. We need to find the transaction ID from the raw transactions.
+  const handleEditBill = (bill) => {
+    // Find the actual transaction entry to get the ID
+    const txn = transactions.find(t => t.type === 'bill' && t.billNo === bill.billNo);
+    if (txn) {
+      setEditBillData({
+        id: txn.id,
+        date: txn.date,
+        billNo: txn.billNo,
+        amount: txn.amount,
+        returnGoods: txn.returnGoods || '',
+        expGoods: txn.expGoods || '',
+      });
+    }
+  };
 
   const filteredBillwise = useMemo(() => {
     return billwise.filter((b) => {
@@ -249,14 +266,15 @@ export default function Dashboard() {
                   <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">Paid</th>
                   <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">Due</th>
                   <th className="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">Status</th>
+                  <th className="text-center px-2 py-3 font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">Edit</th>
                 </tr></thead>
                 <tbody>
                   {filteredBillwise.length === 0 ? (
-                    <tr><td colSpan={7} className="text-center py-12 text-gray-400 dark:text-gray-500">
+                    <tr><td colSpan={8} className="text-center py-12 text-gray-400 dark:text-gray-500">
                       <Receipt className="w-12 h-12 mx-auto mb-3 opacity-30" /><p className="font-medium">No bills yet</p><p className="text-xs mt-1">Click "Add Bill" to create your first entry</p>
                     </td></tr>
                   ) : filteredBillwise.map((bill, i) => (
-                    <BillRow key={bill.billNo} bill={bill} index={i} expanded={!!expandedBills[bill.billNo]} onToggle={() => toggleBillExpand(bill.billNo)} />
+                    <BillRow key={bill.billNo} bill={bill} index={i} expanded={!!expandedBills[bill.billNo]} onToggle={() => toggleBillExpand(bill.billNo)} onEdit={() => handleEditBill(bill)} />
                   ))}
                 </tbody>
               </table>
@@ -316,8 +334,9 @@ export default function Dashboard() {
       <AnimatePresence>
         {showAddBill && <AddBillModal onClose={() => setShowAddBill(false)} onSuccess={() => { fetchData(); showToast('Bill added successfully!'); setShowAddBill(false); }} onError={(msg) => showToast(msg, 'error')} />}
         {showAddPayment && <AddPaymentModal onClose={() => setShowAddPayment(false)} onSuccess={(msg) => { fetchData(); showToast(msg || 'Payment recorded!'); setShowAddPayment(false); }} onError={(msg) => showToast(msg, 'error')} unpaidBills={unpaidBills} remainingBalance={summary.remainingBalance} />}
+        {editBillData && <EditBillModal billData={editBillData} onClose={() => setEditBillData(null)} onSuccess={() => { fetchData(); showToast('Bill updated successfully!'); setEditBillData(null); }} onError={(msg) => showToast(msg, 'error')} />}
         {showQR && <QRModal onClose={() => setShowQR(false)} />}
-        {showProfile && <ProfileModal onClose={() => setShowProfile(false)} user={user} summary={summary} billCount={billwise.length} paymentCount={transactions.filter(t => t.type === 'payment').length} />}
+        {showProfile && <ProfileModal onClose={() => setShowProfile(false)} user={user} summary={summary} billCount={billwise.length} paymentCount={transactions.filter(t => t.type === 'payment').length} onLogout={handleLogout} />}
       </AnimatePresence>
 
       {/* TOAST */}
@@ -334,7 +353,7 @@ export default function Dashboard() {
 }
 
 // ========== BILL ROW ==========
-function BillRow({ bill, index, expanded, onToggle }) {
+function BillRow({ bill, index, expanded, onToggle, onEdit }) {
   const isPaid = bill.due <= 0;
   return (
     <>
@@ -351,11 +370,20 @@ function BillRow({ bill, index, expanded, onToggle }) {
             {isPaid ? <><CheckCircle className="w-3 h-3" /> Paid</> : <><Clock className="w-3 h-3" /> Due</>}
           </span>
         </td>
+        <td className="px-2 py-3 text-center">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"
+            title="Edit Bill"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+          </button>
+        </td>
       </motion.tr>
       <AnimatePresence>
         {expanded && (
           <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <td colSpan={7} className="bg-surface-50/50 dark:bg-surface-800/30 px-6 py-3">
+            <td colSpan={8} className="bg-surface-50/50 dark:bg-surface-800/30 px-6 py-3">
               {bill.payments && bill.payments.length > 0 ? (
                 <><p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Payment History for {bill.billNo}:</p>
                 <div className="space-y-1.5">{bill.payments.map((p, j) => (
@@ -370,6 +398,66 @@ function BillRow({ bill, index, expanded, onToggle }) {
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+// ========== EDIT BILL MODAL ==========
+function EditBillModal({ billData, onClose, onSuccess, onError }) {
+  const [form, setForm] = useState({
+    date: billData.date || '',
+    billNo: billData.billNo || '',
+    amount: billData.amount || '',
+    returnGoods: billData.returnGoods || '',
+    expGoods: billData.expGoods || '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [localError, setLocalError] = useState('');
+
+  const handleChange = (e) => { setForm((prev) => ({ ...prev, [e.target.name]: e.target.value })); setLocalError(''); };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLocalError('');
+    if (!form.date || !form.billNo || !form.amount) { setLocalError('Date, Bill Number, and Amount are required.'); return; }
+    if (parseFloat(form.amount) <= 0) { setLocalError('Amount must be greater than zero.'); return; }
+    setLoading(true);
+    try {
+      await editEntry(billData.id, {
+        date: form.date,
+        billNo: form.billNo.trim(),
+        amount: parseFloat(form.amount),
+        returnGoods: form.returnGoods,
+        expGoods: form.expGoods,
+      });
+      onSuccess();
+    } catch (err) {
+      const errMsg = err.response?.data?.error || 'Failed to update bill.';
+      setLocalError(errMsg);
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <ModalWrapper onClose={onClose} title="Edit Bill">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-xl text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+          <Edit3 className="w-4 h-4" /> Editing bill: <strong>{billData.billNo}</strong>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div><label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">Date *</label><input name="date" type="date" value={form.date} onChange={handleChange} required className="input-field-light" /></div>
+          <div><label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">Bill Number *</label><input name="billNo" type="text" placeholder="e.g. INV-001" value={form.billNo} onChange={handleChange} required className="input-field-light" /></div>
+        </div>
+        <div><label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">Amount (₹) *</label><input name="amount" type="number" step="0.01" min="0.01" placeholder="0.00" value={form.amount} onChange={handleChange} required className="input-field-light text-lg font-semibold" /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div><label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1"><Package className="w-3 h-3" /> Return Goods</label><input name="returnGoods" type="text" placeholder="Optional" value={form.returnGoods} onChange={handleChange} className="input-field-light" /></div>
+          <div><label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1"><Clock className="w-3 h-3" /> Expired Goods</label><input name="expGoods" type="text" placeholder="Optional" value={form.expGoods} onChange={handleChange} className="input-field-light" /></div>
+        </div>
+
+        {localError && <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 text-red-500 text-sm bg-red-50 dark:bg-red-500/10 p-3 rounded-xl"><AlertCircle className="w-4 h-4 flex-shrink-0" /> {localError}</motion.div>}
+        <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
+          {loading ? <span className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full" /> : <><Edit3 className="w-5 h-5" /> Update Bill</>}
+        </button>
+      </form>
+    </ModalWrapper>
   );
 }
 
@@ -530,8 +618,29 @@ function AddPaymentModal({ onClose, onSuccess, onError, unpaidBills, remainingBa
   );
 }
 
-// ========== PROFILE MODAL ==========
-function ProfileModal({ onClose, user, summary, billCount, paymentCount }) {
+// ========== PROFILE MODAL (with Delete Option) ==========
+function ProfileModal({ onClose, user, summary, billCount, paymentCount, onLogout }) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const handleDelete = async () => {
+    setDeleteError('');
+    if (!deletePassword) { setDeleteError('Please enter the password.'); return; }
+    setDeleteLoading(true);
+    try {
+      await deleteProfile(user.dlNumber, { password: deletePassword });
+      // Logout and redirect
+      onLogout();
+    } catch (err) {
+      setDeleteError(err.response?.data?.error || 'Failed to delete profile.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const profileFields = [
     { icon: <Pill className="w-4 h-4 text-brand-500" />, label: 'Shop Name', value: user.shopName },
     { icon: <MapPin className="w-4 h-4 text-blue-500" />, label: 'Address', value: user.address || 'Not provided' },
@@ -580,6 +689,53 @@ function ProfileModal({ onClose, user, summary, billCount, paymentCount }) {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Delete Profile Section */}
+        <div className="pt-4 border-t border-surface-200 dark:border-white/10">
+          {!showDeleteConfirm ? (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 font-medium hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-sm"
+            >
+              <Trash2 className="w-4 h-4" /> Delete Profile
+            </button>
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+              <div className="p-3 bg-red-50 dark:bg-red-500/10 rounded-xl border border-red-200 dark:border-red-500/20">
+                <p className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Warning: This action is irreversible!</p>
+                <p className="text-xs text-red-600 dark:text-red-400/80 mt-1">All bills, payments, and profile data will be permanently deleted.</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1"><Lock className="w-3 h-3" /> Enter Admin Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={deletePassword}
+                    onChange={(e) => { setDeletePassword(e.target.value); setDeleteError(''); }}
+                    placeholder="Enter password to confirm"
+                    className="input-field-light pr-10"
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              {deleteError && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-red-500 text-sm bg-red-50 dark:bg-red-500/10 p-3 rounded-xl">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" /> {deleteError}
+                </motion.div>
+              )}
+              <div className="flex gap-3">
+                <button onClick={() => { setShowDeleteConfirm(false); setDeletePassword(''); setDeleteError(''); }}
+                  className="flex-1 py-3 px-4 rounded-xl border border-surface-200 dark:border-white/10 text-gray-700 dark:text-gray-300 font-medium hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors text-sm">Cancel</button>
+                <button onClick={handleDelete} disabled={deleteLoading}
+                  className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors text-sm flex items-center justify-center gap-2">
+                  {deleteLoading ? <span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> : <><Trash2 className="w-4 h-4" /> Confirm Delete</>}
+                </button>
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
     </ModalWrapper>

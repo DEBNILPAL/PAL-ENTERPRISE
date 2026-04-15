@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
@@ -10,20 +10,44 @@ function ProtectedRoute({ children }) {
   return isAuthenticated ? children : <Navigate to="/" replace />;
 }
 
-function AppRoutes() {
+function DarkModeToggle({ darkMode, setDarkMode }) {
+  const location = useLocation();
+  // Only show dark mode toggle on dashboard, not on landing page
+  if (location.pathname === '/') return null;
+
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <button
+      id="dark-mode-toggle"
+      onClick={() => setDarkMode(!darkMode)}
+      className="fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full bg-brand-600 dark:bg-brand-400 text-white dark:text-surface-900 shadow-lg hover:shadow-glow flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+      aria-label="Toggle dark mode"
+    >
+      {darkMode ? (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      ) : (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      )}
+    </button>
+  );
+}
+
+function AppRoutes({ darkMode, setDarkMode }) {
+  return (
+    <>
+      <DarkModeToggle darkMode={darkMode} setDarkMode={setDarkMode} />
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 }
 
@@ -44,20 +68,7 @@ export default function App() {
     <AuthProvider>
       <Router>
         <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark' : ''}`}>
-          {/* Global dark mode toggle floating button */}
-          <button
-            id="dark-mode-toggle"
-            onClick={() => setDarkMode(!darkMode)}
-            className="fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full bg-brand-600 dark:bg-brand-400 text-white dark:text-surface-900 shadow-lg hover:shadow-glow flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
-            aria-label="Toggle dark mode"
-          >
-            {darkMode ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            )}
-          </button>
-          <AppRoutes />
+          <AppRoutes darkMode={darkMode} setDarkMode={setDarkMode} />
         </div>
       </Router>
     </AuthProvider>

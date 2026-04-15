@@ -228,3 +228,64 @@ body {
   background-color: #020617;
   color: #e2e8f0;
 }
+
+/* ========== DATE INPUT DARK MODE FIX ========== */
+/* Calendar icon color */
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0.8);
+  cursor: pointer;
+  opacity: 0.7;
+}
+.dark input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Light mode calendar icon styling */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 2px;
+  border-radius: 4px;
+  transition: opacity 0.2s;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Date input text color fix */
+.dark input[type="date"] {
+  color-scheme: dark;
+}
+input[type="date"] {
+  color-scheme: light;
+}
+
+/* ========== CHECKBOX & RADIO DARK MODE FIX ========== */
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+  accent-color: #818cf8;
+  filter: brightness(1.2);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #6366f1;
+}
+
+/* ========== SELECT DROPDOWN DARK MODE ========== */
+.dark select {
+  color-scheme: dark;
+}
+select {
+  color-scheme: light;
+}
+
+/* ========== GENERAL INPUT DARK MODE IMPROVEMENTS ========== */
+.dark input::placeholder {
+  color: rgba(148, 163, 184, 0.6);
+}
+.dark select option {
+  background-color: #1e293b;
+  color: #e2e8f0;
+}
+
