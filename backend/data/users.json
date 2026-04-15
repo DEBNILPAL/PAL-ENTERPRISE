@@ -1,0 +1,30 @@
+[
+  {
+    "id": "mnzl6zic4kthpw",
+    "shopName": "Sharma Medical",
+    "address": "12 MG Road",
+    "dlNumber": "DL-100",
+    "ledgerFolio": "F-01",
+    "phone": "9876500001",
+    "doctorName": "Dr. Sharma",
+    "createdAt": "2026-04-15T05:05:17.892Z"
+  },
+  {
+    "id": "mnzmd2vxx0kxi1",
+    "shopName": "Test Pharma",
+    "address": "10 Main St",
+    "dlNumber": "DL-TEST-99",
+    "ledgerFolio": "F-99",
+    "phone": "9999999999",
+    "doctorName": "Dr. Test",
+    "createdAt": "2026-04-15T05:38:01.821Z"
+  },
+  {
+    "id": "mnzqva4yae7m59",
+    "shopName": "CORS Test",
+    "dlNumber": "DL-CORS",
+    "phone": "1111111111",
+    "doctorName": "",
+    "createdAt": "2026-04-15T07:44:09.490Z"
+  }
+]

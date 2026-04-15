@@ -6,11 +6,6 @@ frontend/dist/
 
 # Environment files
 backend/.env
-frontend/.env.production
-
-# Data files (JSON database)
-backend/data/users.json
-backend/data/transactions.json
 
 # IDE
 .vscode/
