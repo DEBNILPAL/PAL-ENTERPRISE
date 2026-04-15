@@ -8,10 +8,33 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ---------- Middleware ----------
-const corsOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',').map((s) => s.trim())
-  : ['http://localhost:3000', 'http://localhost:5173'];
-app.use(cors({ origin: corsOrigins, credentials: true }));
+// CORS: allow deployed Netlify frontend + localhost for development
+const allowedOrigins = [
+  'https://palenterprise.netlify.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+// Add any custom origins from env var
+if (process.env.CORS_ORIGINS) {
+  process.env.CORS_ORIGINS.split(',').forEach((o) => {
+    const trimmed = o.trim();
+    if (trimmed && !allowedOrigins.includes(trimmed)) allowedOrigins.push(trimmed);
+  });
+}
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Also allow any *.netlify.app subdomain
+    if (origin.endsWith('.netlify.app')) return callback(null, true);
+    console.log('[CORS] Blocked origin:', origin);
+    callback(null, false);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json({ limit: '10mb' })); // Allow large payloads for signatures
 
 // Basic rate limiting (simple in-memory)
